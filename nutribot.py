@@ -104,6 +104,7 @@ def food(update: Update, context: CallbackContext) -> int:
 
 def more(update: Update, context: CallbackContext) -> int:
     username = update.message.from_user.username
+    month = update.message.date.date().strftime("%m/%Y")
     date = update.message.date.date().strftime("%d/%m/%Y")
     mealtype = mealtypes[username]
     food = update.message.text
@@ -120,11 +121,13 @@ def more(update: Update, context: CallbackContext) -> int:
 
     if username not in storage:
         storage[username] = {}
-    if date not in storage[username]: 
-        storage[username][date] = {}
-    if mealtype not in storage[username][date]:
-        storage[username][date][mealtype] = []
-    arr = storage[username][date][mealtype]
+    if month not in storage[username]:
+        storage[username][month] = {}
+    if date not in storage[username][month]:
+        storage[username][month][date] = {}
+    if mealtype not in storage[username][month][date]:
+        storage[username][month][date][mealtype] = []
+    arr = storage[username][month][date][mealtype]
     arr.append(food)
 
     reply_keyboard = [['Yes'], ['No']]
@@ -145,36 +148,37 @@ def add_success(update: Update, context: CallbackContext) -> int:
 
 def daily(update: Update, context: CallbackContext) -> None:
     user = update.message.from_user.username
+    month = update.message.date.date().strftime("%m/%Y")
     date = update.message.date.date().strftime("%d/%m/%Y")
     reply = ''
     total_cal = 0
     total_carb = 0
     total_pro = 0
     total_fat = 0
-    if user not in storage or date not in storage[user]:
+    if user not in storage or date not in storage[user][month]:
         reply = 'No data for today!'
     else:
-        if 'Breakfast' in storage[user][date]:
+        if 'Breakfast' in storage[user][month][date]:
             reply += '*Breakfast*\n'
-            for food in storage[user][date]['Breakfast']:
+            for food in storage[user][month][date]['Breakfast']:
                 reply = reply + '- ' + food + '\n'
                 total_cal += data[food][0]
                 total_carb += data[food][1]
                 total_pro += data[food][2]
                 total_fat += data[food][3]
             reply += '\n'
-        if 'Lunch' in storage[user][date]:
+        if 'Lunch' in storage[user][month][date]:
             reply += '*Lunch*\n'
-            for food in storage[user][date]['Lunch']:
+            for food in storage[user][month][date]['Lunch']:
                 reply = reply + '- ' + food + '\n'
                 total_cal += data[food][0]
                 total_carb += data[food][1]
                 total_pro += data[food][2]
                 total_fat += data[food][3]
             reply += '\n'
-        if 'Dinner' in storage[user][date]:
+        if 'Dinner' in storage[user][month][date]:
             reply += '*Dinner*\n'
-            for food in storage[user][date]['Dinner']:
+            for food in storage[user][month][date]['Dinner']:
                 reply = reply + '- ' + food + '\n'
                 total_cal += data[food][0]
                 total_carb += data[food][1]
@@ -187,7 +191,60 @@ def daily(update: Update, context: CallbackContext) -> None:
         parse_mode='Markdown',
         reply_markup=ReplyKeyboardRemove(),
     )
-    return ConversationHandler.END    
+    return ConversationHandler.END
+
+def monthly(update: Update, context: CallbackContext) -> None:
+    user = update.message.from_user.username
+    month = update.message.date.date().strftime("%m/%Y")
+    reply = ''
+    total_cal = 0
+    total_carb = 0
+    total_pro = 0
+    total_fat = 0
+    if user not in storage or month not in storage[user]:
+        reply = 'No data for this month!'
+    else:
+        total_days = len(storage[user][month])
+        for date in storage[user][month]:
+            reply += '*%s*\n' % date
+            if 'Breakfast' in storage[user][month][date]:
+                reply += '*Breakfast*\n'
+                for food in storage[user][month][date]['Breakfast']:
+                    reply = reply + '- ' + food + '\n'
+                    total_cal += data[food][0]
+                    total_carb += data[food][1]
+                    total_pro += data[food][2]
+                    total_fat += data[food][3]
+            if 'Lunch' in storage[user][month][date]:
+                reply += '*Lunch*\n'
+                for food in storage[user][month][date]['Lunch']:
+                    reply = reply + '- ' + food + '\n'
+                    total_cal += data[food][0]
+                    total_carb += data[food][1]
+                    total_pro += data[food][2]
+                    total_fat += data[food][3]
+            if 'Dinner' in storage[user][month][date]:
+                reply += '*Dinner*\n'
+                for food in storage[user][month][date]['Dinner']:
+                    reply = reply + '- ' + food + '\n'
+                    total_cal += data[food][0]
+                    total_carb += data[food][1]
+                    total_pro += data[food][2]
+                    total_fat += data[food][3]
+            reply += '\n'
+
+        average_cal = total_cal / total_days
+        average_carb = total_carb / total_days
+        average_pro = total_pro / total_days
+        average_fat = total_fat / total_days
+        reply = reply + '*Total nutrients intake for this month*' + '\nTotal calories: ' + "{:.1f}".format(total_cal) + 'kcal\nTotal carbohydrates: ' + "{:.1f}".format(total_carb) + 'g\nTotal protein: ' + "{:.1f}".format(total_pro) + 'g\nTotal fat: ' + "{:.1f}".format(total_fat) + 'g\n\n'
+        reply = reply + '*Average nutrients intake for this month*' + '\nAverage calories: ' + "{:.1f}".format(average_cal) + 'kcal\nAverage carbohydrates: ' + "{:.1f}".format(average_carb) + 'g\nAverage protein: ' + "{:.1f}".format(average_pro) + 'g\nAverage fat: ' + "{:.1f}".format(average_fat) + 'g'
+    update.message.reply_text(
+        reply,
+        parse_mode='Markdown',
+        reply_markup=ReplyKeyboardRemove(),
+    )
+    return ConversationHandler.END
 
 def cancel(update: Update, context: CallbackContext) -> int:
     update.message.reply_text(
@@ -214,6 +271,7 @@ def main():
     dispatcher.add_handler(CommandHandler("info", info))
     dispatcher.add_handler(CommandHandler("recommended", recommended))
     dispatcher.add_handler(CommandHandler("daily", daily))
+    dispatcher.add_handler(CommandHandler("monthly", monthly))
 
     # Add conversation handler with the states
     conv_handler = ConversationHandler(
