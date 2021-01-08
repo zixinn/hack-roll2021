@@ -1,3 +1,5 @@
+import os
+import json
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram.ext import (
     Updater,
@@ -11,19 +13,25 @@ from telegram.ext import (
 FOOD, MORE, ADD = range(3)
 
 data = {
-    "Chicken fried rice (198g)": [329, 41.8, 12.4, 11.9],
-    "Macaroni Cheese (350g)": [361, 57.4, 18.9, 5.6],
-    "14 inch Cheese Pizza (63g, 1 slice)": [192, 16.7, 8.9, 9.8],
+    "Chicken Fried Rice": [329, 41.8, 12.4, 11.9],
+    "Macaroni Cheese": [361, 57.4, 18.9, 5.6],
+    "Cheese Pizza (1 Slice)": [192, 16.7, 8.9, 9.8],
     "Zinger Burger": [450, 47.5, 25.7, 17.5],
-    "Egg (50g)": [74, 0.3, 6.2, 4.9]
+    "Egg": [74, 0.3, 6.2, 4.9]
 }
 dailyRecommended = { "Calories": [2000, "kcal"], 
     "Carbohydrates": [260, "g"], 
     "Protein": [50, "g"], 
     "Fat": [70, "g"] }
 
-storage = {}
 mealtypes = {}
+storage = {}
+text = ''
+if os.path.exists("storage.txt"):
+    f = open("storage.txt", "r")
+    text = f.read()
+if text != '':
+    storage = json.loads(text)
 
 # Define a few command handlers. These usually take the two arguments update and
 # context. Error handlers also receive the raised TelegramError object in error.
@@ -41,12 +49,27 @@ def help(update: Update, context: CallbackContext) -> None:
     update.message.reply_text('Available commands:\n'
         '/start - start nutribot\n'
         '/help - show available commands\n'
+        '/info - show nutritional information of food available\n'
         '/recommended - show recommended daily nutrient intake\n'
         '/add - add a meal\n'
         '/daily - show nutrient intake for today\n'
+        '/monthly - show average nutrient intake for the current month\n'
         '/cancel - stop nutribot', 
         reply_markup=ReplyKeyboardRemove(),
     )
+
+def info(update: Update, context: CallbackContext) -> None:
+    string = ""
+    for item in data:
+        string += "*"
+        string += item
+        string += "*\n"
+        string += str(data[item][0]) + "kcal Calories, " + str(data[item][1]) + "g Carbohydrates, " + str(data[item][2]) + "g Protein, " + str(data[item][3]) + "g Fats" + "\n\n"
+        
+    update.message.reply_text(
+        string, 
+        parse_mode='Markdown', 
+        reply_markup=ReplyKeyboardRemove(),)
 
 def recommended(update: Update, context: CallbackContext) -> None:
     strings = []
@@ -81,7 +104,7 @@ def food(update: Update, context: CallbackContext) -> int:
 
 def more(update: Update, context: CallbackContext) -> int:
     username = update.message.from_user.username
-    date = update.message.date.date()
+    date = update.message.date.date().strftime("%d/%m/%Y")
     mealtype = mealtypes[username]
     food = update.message.text
 
@@ -116,11 +139,13 @@ def add_success(update: Update, context: CallbackContext) -> int:
         'The meal has been added!',
         reply_markup=ReplyKeyboardRemove(),
     )
+    f = open("storage.txt", "w")
+    f.write(json.dumps(storage))
     return ConversationHandler.END
-    
+
 def daily(update: Update, context: CallbackContext) -> None:
     user = update.message.from_user.username
-    date = update.message.date.date()
+    date = update.message.date.date().strftime("%d/%m/%Y")
     reply = ''
     total_cal = 0
     total_carb = 0
@@ -129,7 +154,6 @@ def daily(update: Update, context: CallbackContext) -> None:
     if user not in storage or date not in storage[user]:
         reply = 'No data for today!'
     else:
-        print(storage[user][date])
         if 'Breakfast' in storage[user][date]:
             reply += '*Breakfast*\n'
             for food in storage[user][date]['Breakfast']:
@@ -157,7 +181,7 @@ def daily(update: Update, context: CallbackContext) -> None:
                 total_pro += data[food][2]
                 total_fat += data[food][3]
             reply += '\n'
-        reply = reply + '*Total nutrients intake*' + '\nTotal calories: ' + "{:.1f}".format(total_cal) + ' kcal\nTotal carbohydrates: ' + "{:.1f}".format(total_carb) + ' g\nTotal protein: ' + "{:.1f}".format(total_pro) + ' g\nTotal fat: ' + "{:.1f}".format(total_fat) + ' g'
+        reply = reply + '*Total nutrients intake*' + '\nTotal calories: ' + "{:.1f}".format(total_cal) + 'kcal\nTotal carbohydrates: ' + "{:.1f}".format(total_carb) + 'g\nTotal protein: ' + "{:.1f}".format(total_pro) + 'g\nTotal fat: ' + "{:.1f}".format(total_fat) + 'g'
     update.message.reply_text(
         reply,
         parse_mode='Markdown',
@@ -186,8 +210,10 @@ def main():
     dispatcher.add_handler(CommandHandler("start", start))
     dispatcher.add_handler(CommandHandler("help", help))
     dispatcher.add_handler(CommandHandler("cancel", cancel))
-    dispatcher.add_handler(CommandHandler("daily", daily))
+    
+    dispatcher.add_handler(CommandHandler("info", info))
     dispatcher.add_handler(CommandHandler("recommended", recommended))
+    dispatcher.add_handler(CommandHandler("daily", daily))
 
     # Add conversation handler with the states
     conv_handler = ConversationHandler(
