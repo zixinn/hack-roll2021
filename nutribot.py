@@ -339,55 +339,63 @@ def foodName(update: Update, context: CallbackContext) -> int:
     update.message.reply_text('Please enter the Calories of food',reply_markup=ReplyKeyboardRemove())
     
     return FOODCAL
+    
+def is_number(s):
+    """ Returns True is string is a number. """
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
 
 def foodCal(update: Update, context: CallbackContext) -> int:
     response = update.message.text
-    if (not response.isdecimal()):
+    if (not is_number(response)):
         update.message.reply_text('Please give a number',
             reply_markup=ReplyKeyboardRemove(),
         )
         return FOODCAL
     username = update.message.from_user.username
-    userdata[username][0][userdata[username][1]].append(int(response))
+    userdata[username][0][userdata[username][1]].append(float(response))
     update.message.reply_text('Please enter the Carbohydrates of food',reply_markup=ReplyKeyboardRemove())
     
     return FOODCARB
 
 def foodCarb(update: Update, context: CallbackContext) -> int:
     response = update.message.text
-    if (not response.isdecimal()):
+    if (not is_number(response)):
         update.message.reply_text('Please give a number',
             reply_markup=ReplyKeyboardRemove(),
         )
         return FOODCARB
     username = update.message.from_user.username
-    userdata[username][0][userdata[username][1]].append(int(response))
+    userdata[username][0][userdata[username][1]].append(float(response))
     update.message.reply_text('Please enter the Protein of food',reply_markup=ReplyKeyboardRemove())
     
     return FOODPROTEIN
 
 def foodProtein(update: Update, context: CallbackContext) -> int:
     response = update.message.text
-    if (not response.isdecimal()):
+    if (not is_number(response)):
         update.message.reply_text('Please give a number',
             reply_markup=ReplyKeyboardRemove(),
         )
         return FOODPROTEIN
     username = update.message.from_user.username
-    userdata[username][0][userdata[username][1]].append(int(response))
+    userdata[username][0][userdata[username][1]].append(float(response))
     update.message.reply_text('Please enter the Fat of food',reply_markup=ReplyKeyboardRemove())
     
     return FOODFAT
 
 def foodFat(update: Update, context: CallbackContext) -> int:
     response = update.message.text
-    if (not response.isdecimal()):
+    if (not is_number(response)):
         update.message.reply_text('Please give a number',
             reply_markup=ReplyKeyboardRemove(),
         )
         return FOODFAT
     username = update.message.from_user.username
-    userdata[username][0][userdata[username][1]].append(int(response))
+    userdata[username][0][userdata[username][1]].append(float(response))
     update.message.reply_text('Your food has been added!',reply_markup=ReplyKeyboardRemove())
     f = open("userdata.txt", "w")
     f.write(json.dumps(userdata))
