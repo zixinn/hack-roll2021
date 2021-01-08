@@ -14,8 +14,9 @@ from telegram.ext import (
 FOOD, MORE, ADD, FOODNAME, FOODCAL, FOODCARB, FOODPROTEIN, FOODFAT = range(8)
 
 userdata = {}
+page = {}
 
-data = pd.read_csv("Food.csv").iloc[:20,[1,3,4,5,6]]
+data = pd.read_csv("Food.csv").iloc[:,[1,3,4,5,6]]
 data = data.set_index('Name').T.to_dict('list')
 
 dailyRecommended = { "Calories": [2000, "kcal"], 
@@ -108,8 +109,34 @@ def food(update: Update, context: CallbackContext) -> int:
         mealtypes[username] = text
 
     reply_keyboard = []
-    for e in list(userdata[username][0].keys()):
-        reply_keyboard.append([e])
+    #for e in list(userdata[username][0].keys()):
+    #    reply_keyboard.append([e])
+    
+    size = len(userdata[username][0].keys())
+    if username not in page:
+        page[username] = 0
+        if size <= 10:
+            for e in list(userdata[username][0].keys()):
+                reply_keyboard.append([e])
+        else:
+            for i in range(0, 10):
+                reply_keyboard.append([list(userdata[username][0].keys())[i]])
+            reply_keyboard.append(['Next Page'])
+            page[username] = 10
+    else:
+        if size <= 10:
+            for e in list(userdata[username][0].keys()):
+                reply_keyboard.append([e])
+        else:
+            if size - page[username] <= 10:
+                for i in range(page[username], size):
+                    reply_keyboard.append([list(userdata[username][0].keys())[i]])
+            else:
+                for i in range(page[username], page[username] + 10):
+                    reply_keyboard.append([list(userdata[username][0].keys())[i]])
+                reply_keyboard.append(['Next Page'])
+                page[username] += 10
+                
     update.message.reply_text(
         'What did you eat?',
         reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
@@ -122,7 +149,42 @@ def more(update: Update, context: CallbackContext) -> int:
     date = update.message.date.date().strftime("%d/%m/%Y")
     mealtype = mealtypes[username]
     food = update.message.text
-
+    
+    if food == 'Next Page':
+        reply_keyboard = []
+        #for e in list(userdata[username][0].keys()):
+        #    reply_keyboard.append([e])
+        
+        size = len(userdata[username][0].keys())
+        if username not in page:
+            page[username] = 0
+            if size <= 10:
+                for e in list(userdata[username][0].keys()):
+                    reply_keyboard.append([e])
+            else:
+                for i in range(0, 10):
+                    reply_keyboard.append([list(userdata[username][0].keys())[i]])
+                reply_keyboard.append(['Next Page'])
+                page[username] = 10
+        else:
+            if size <= 10:
+                for e in list(userdata[username][0].keys()):
+                    reply_keyboard.append([e])
+            else:
+                if size - page[username] <= 10:
+                    for i in range(page[username], size):
+                        reply_keyboard.append([list(userdata[username][0].keys())[i]])
+                else:
+                    for i in range(page[username], page[username] + 10):
+                        reply_keyboard.append([list(userdata[username][0].keys())[i]])
+                    reply_keyboard.append(['Next Page'])
+                    page[username] += 10                    
+        update.message.reply_text(
+            'What did you eat?',
+            reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
+        )
+        return MORE
+    
     if food not in userdata[username][0]:
         reply_keyboard = []
         for e in list(userdata[username][0].keys()):
@@ -143,7 +205,7 @@ def more(update: Update, context: CallbackContext) -> int:
         storage[username][month][date][mealtype] = []
     arr = storage[username][month][date][mealtype]
     arr.append(food)
-
+    page[username] = 0
     reply_keyboard = [['Yes'], ['No']]
     update.message.reply_text(
         'Is there more food to be added?',
