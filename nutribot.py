@@ -342,7 +342,7 @@ def foodName(update: Update, context: CallbackContext) -> int:
 
 def foodCal(update: Update, context: CallbackContext) -> int:
     response = update.message.text
-    if (not response.isdigit()):
+    if (not response.isdecimal()):
         update.message.reply_text('Please give a number',
             reply_markup=ReplyKeyboardRemove(),
         )
@@ -355,7 +355,7 @@ def foodCal(update: Update, context: CallbackContext) -> int:
 
 def foodCarb(update: Update, context: CallbackContext) -> int:
     response = update.message.text
-    if (not response.isdigit()):
+    if (not response.isdecimal()):
         update.message.reply_text('Please give a number',
             reply_markup=ReplyKeyboardRemove(),
         )
@@ -368,7 +368,7 @@ def foodCarb(update: Update, context: CallbackContext) -> int:
 
 def foodProtein(update: Update, context: CallbackContext) -> int:
     response = update.message.text
-    if (not response.isdigit()):
+    if (not response.isdecimal()):
         update.message.reply_text('Please give a number',
             reply_markup=ReplyKeyboardRemove(),
         )
@@ -381,7 +381,7 @@ def foodProtein(update: Update, context: CallbackContext) -> int:
 
 def foodFat(update: Update, context: CallbackContext) -> int:
     response = update.message.text
-    if (not response.isdigit()):
+    if (not response.isdecimal()):
         update.message.reply_text('Please give a number',
             reply_markup=ReplyKeyboardRemove(),
         )
