@@ -37,4 +37,4 @@ pip3 install python-telegram-bot
 
 ## Acknowledgments
 
-* The food nutritional information is modified from [MyFoodData Nutrition Facts SpreadSheet Release 1.4](https://docs.google.com/spreadsheets/d/1snqE6leDkZlL61qQ4g-vUmiFjizJyN1OCVAhwWWKSm4/edit#gid=2024304766)
+* The food nutritional information is modified from [HPB-MOH Clinical Practice Guidelines 1/2016 Annex A](https://www.hpb.gov.sg/docs/default-source/pdf/obesity-cpg_main_for-online-30-aug.pdf?sfvrsn=2288eb72_0)
