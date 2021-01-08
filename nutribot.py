@@ -1,5 +1,6 @@
 import os
 import json
+import pandas as pd
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram.ext import (
     Updater,
@@ -13,13 +14,10 @@ from telegram.ext import (
 FOOD, MORE, ADD, FOODNAME, FOODCAL, FOODCARB, FOODPROTEIN, FOODFAT = range(8)
 
 userdata = {}
-data = {
-    "Chicken Fried Rice": [329, 41.8, 12.4, 11.9],
-    "Macaroni Cheese": [361, 57.4, 18.9, 5.6],
-    "Cheese Pizza (1 Slice)": [192, 16.7, 8.9, 9.8],
-    "Zinger Burger": [450, 47.5, 25.7, 17.5],
-    "Egg": [74, 0.3, 6.2, 4.9]
-}
+
+data = pd.read_csv("Food.csv").iloc[:20,[1,3,4,5,6]]
+data = data.set_index('Name').T.to_dict('list')
+
 dailyRecommended = { "Calories": [2000, "kcal"], 
     "Carbohydrates": [260, "g"], 
     "Protein": [50, "g"], 
@@ -80,7 +78,7 @@ def info(update: Update, context: CallbackContext) -> None:
         string += "*"
         string += item
         string += "*\n"
-        string += str(userdata[username][0][item][0]) + " kcal Calories, " + str(userdata[username][0][item][1]) + " g Carbohydrates, " + str(userdata[username][0][item][2]) + " g Protein, " + str(userdata[username][0][item][3]) + " g Fats" + "\n\n"
+        string += "{:.1f}".format(userdata[username][0][item][0]) + " kcal Calories, " + "{:.1f}".format(userdata[username][0][item][1]) + " g Carbohydrates, " + "{:.1f}".format(userdata[username][0][item][2]) + " g Protein, " + "{:.1f}".format(userdata[username][0][item][3]) + " g Fats" + "\n\n"
 
     update.message.reply_text(
         string, 
