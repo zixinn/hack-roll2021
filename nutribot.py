@@ -10,8 +10,9 @@ from telegram.ext import (
     CallbackContext,
 )
 
-FOOD, MORE, ADD = range(3)
+FOOD, MORE, ADD, FOODNAME, FOODCAL, FOODCARB, FOODPROTEIN, FOODFAT = range(8)
 
+userdata = {}
 data = {
     "Chicken Fried Rice": [329, 41.8, 12.4, 11.9],
     "Macaroni Cheese": [361, 57.4, 18.9, 5.6],
@@ -33,11 +34,24 @@ if os.path.exists("storage.txt"):
 if text != '':
     storage = json.loads(text)
 
+userdatatext = ''
+if os.path.exists("userdata.txt"):
+    f = open("userdata.txt", "r")
+    userdatatext = f.read()
+if userdatatext != '':
+    userdata = json.loads(userdatatext)
+
 # Define a few command handlers. These usually take the two arguments update and
 # context. Error handlers also receive the raised TelegramError object in error.
 def start(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /start is issued."""
     name = update.message.from_user.first_name
+    username = update.message.from_user.username
+    if username not in userdata:
+        userdata[username] = []
+        temp = data.copy()
+        userdata[username].append(temp)
+        userdata[username].append("null")
     update.message.reply_text('Hi, ' + name + '! Nice to meet you! I\'m NutriBot!\n\n'
         'Send /help to see a list of available commands.\n'
         'Send /cancel to stop talking to me.', 
@@ -54,18 +68,20 @@ def help(update: Update, context: CallbackContext) -> None:
         '/add - add a meal\n'
         '/daily - show nutrient intake for today\n'
         '/monthly - show average nutrient intake for the current month\n'
+        '/addfood - add new food into food list\n'
         '/cancel - stop nutribot', 
         reply_markup=ReplyKeyboardRemove(),
     )
 
 def info(update: Update, context: CallbackContext) -> None:
     string = ""
-    for item in data:
+    username = update.message.from_user.username
+    for item in userdata[username][0]:
         string += "*"
         string += item
         string += "*\n"
-        string += str(data[item][0]) + "kcal Calories, " + str(data[item][1]) + "g Carbohydrates, " + str(data[item][2]) + "g Protein, " + str(data[item][3]) + "g Fats" + "\n\n"
-        
+        string += str(userdata[username][0][item][0]) + " kcal Calories, " + str(userdata[username][0][item][1]) + " g Carbohydrates, " + str(userdata[username][0][item][2]) + " g Protein, " + str(userdata[username][0][item][3]) + " g Fats" + "\n\n"
+
     update.message.reply_text(
         string, 
         parse_mode='Markdown', 
@@ -94,7 +110,7 @@ def food(update: Update, context: CallbackContext) -> int:
         mealtypes[username] = text
 
     reply_keyboard = []
-    for e in list(data.keys()):
+    for e in list(userdata[username][0].keys()):
         reply_keyboard.append([e])
     update.message.reply_text(
         'What did you eat?',
@@ -109,9 +125,9 @@ def more(update: Update, context: CallbackContext) -> int:
     mealtype = mealtypes[username]
     food = update.message.text
 
-    if food not in data:
+    if food not in userdata[username][0]:
         reply_keyboard = []
-        for e in list(data.keys()):
+        for e in list(userdata[username][0].keys()):
             reply_keyboard.append([e])
         update.message.reply_text(
             'Please select a food from the list given.',
@@ -147,7 +163,7 @@ def add_success(update: Update, context: CallbackContext) -> int:
     return ConversationHandler.END
 
 def daily(update: Update, context: CallbackContext) -> None:
-    user = update.message.from_user.username
+    username = update.message.from_user.username
     month = update.message.date.date().strftime("%m/%Y")
     date = update.message.date.date().strftime("%d/%m/%Y")
     reply = ''
@@ -155,37 +171,40 @@ def daily(update: Update, context: CallbackContext) -> None:
     total_carb = 0
     total_pro = 0
     total_fat = 0
-    if user not in storage or date not in storage[user][month]:
+    
+    if username not in storage or date not in storage[username][month]:
         reply = 'No data for today!'
     else:
-        if 'Breakfast' in storage[user][month][date]:
+        if 'Breakfast' in storage[username][month][date]:
             reply += '*Breakfast*\n'
-            for food in storage[user][month][date]['Breakfast']:
+            for food in storage[username][month][date]['Breakfast']:
                 reply = reply + '- ' + food + '\n'
-                total_cal += data[food][0]
-                total_carb += data[food][1]
-                total_pro += data[food][2]
-                total_fat += data[food][3]
+                total_cal += userdata[username][0][food][0]
+                total_carb += userdata[username][0][food][1]
+                total_pro += userdata[username][0][food][2]
+                total_fat += userdata[username][0][food][3]
             reply += '\n'
-        if 'Lunch' in storage[user][month][date]:
+            
+        if 'Lunch' in storage[username][month][date]:
             reply += '*Lunch*\n'
-            for food in storage[user][month][date]['Lunch']:
+            for food in storage[username][month][date]['Lunch']:
                 reply = reply + '- ' + food + '\n'
-                total_cal += data[food][0]
-                total_carb += data[food][1]
-                total_pro += data[food][2]
-                total_fat += data[food][3]
+                total_cal += userdata[username][0][food][0]
+                total_carb += userdata[username][0][food][1]
+                total_pro += userdata[username][0][food][2]
+                total_fat += userdata[username][0][food][3]
             reply += '\n'
-        if 'Dinner' in storage[user][month][date]:
+
+        if 'Dinner' in storage[username][month][date]:
             reply += '*Dinner*\n'
-            for food in storage[user][month][date]['Dinner']:
+            for food in storage[username][month][date]['Dinner']:
                 reply = reply + '- ' + food + '\n'
-                total_cal += data[food][0]
-                total_carb += data[food][1]
-                total_pro += data[food][2]
-                total_fat += data[food][3]
+                total_cal += userdata[username][0][food][0]
+                total_carb += userdata[username][0][food][1]
+                total_pro += userdata[username][0][food][2]
+                total_fat += userdata[username][0][food][3]
             reply += '\n'
-        reply = reply + '*Total nutrients intake*' + '\nTotal calories: ' + "{:.1f}".format(total_cal) + 'kcal\nTotal carbohydrates: ' + "{:.1f}".format(total_carb) + 'g\nTotal protein: ' + "{:.1f}".format(total_pro) + 'g\nTotal fat: ' + "{:.1f}".format(total_fat) + 'g'
+        reply = reply + '*Total nutrients intake*' + '\nTotal calories: ' + "{:.1f}".format(total_cal) + ' kcal\nTotal carbohydrates: ' + "{:.1f}".format(total_carb) + ' g\nTotal protein: ' + "{:.1f}".format(total_pro) + ' g\nTotal fat: ' + "{:.1f}".format(total_fat) + ' g'
     update.message.reply_text(
         reply,
         parse_mode='Markdown',
@@ -194,56 +213,125 @@ def daily(update: Update, context: CallbackContext) -> None:
     return ConversationHandler.END
 
 def monthly(update: Update, context: CallbackContext) -> None:
-    user = update.message.from_user.username
+    username = update.message.from_user.username
     month = update.message.date.date().strftime("%m/%Y")
     reply = ''
     total_cal = 0
     total_carb = 0
     total_pro = 0
     total_fat = 0
-    if user not in storage or month not in storage[user]:
+    if username not in storage or month not in storage[username]:
         reply = 'No data for this month!'
     else:
-        total_days = len(storage[user][month])
-        for date in storage[user][month]:
+        total_days = len(storage[username][month])
+        for date in storage[username][month]:
             reply += '*%s*\n' % date
-            if 'Breakfast' in storage[user][month][date]:
+            if 'Breakfast' in storage[username][month][date]:
                 reply += '*Breakfast*\n'
-                for food in storage[user][month][date]['Breakfast']:
+                for food in storage[username][month][date]['Breakfast']:
                     reply = reply + '- ' + food + '\n'
-                    total_cal += data[food][0]
-                    total_carb += data[food][1]
-                    total_pro += data[food][2]
-                    total_fat += data[food][3]
-            if 'Lunch' in storage[user][month][date]:
+                    total_cal += userdata[username][0][food][0]
+                    total_carb += userdata[username][0][food][1]
+                    total_pro += userdata[username][0][food][2]
+                    total_fat += userdata[username][0][food][3]
+            if 'Lunch' in storage[username][month][date]:
                 reply += '*Lunch*\n'
-                for food in storage[user][month][date]['Lunch']:
+                for food in storage[username][month][date]['Lunch']:
                     reply = reply + '- ' + food + '\n'
-                    total_cal += data[food][0]
-                    total_carb += data[food][1]
-                    total_pro += data[food][2]
-                    total_fat += data[food][3]
-            if 'Dinner' in storage[user][month][date]:
+                    total_cal += userdata[username][0][food][0]
+                    total_carb += userdata[username][0][food][1]
+                    total_pro += userdata[username][0][food][2]
+                    total_fat += userdata[username][0][food][3]
+            if 'Dinner' in storage[username][month][date]:
                 reply += '*Dinner*\n'
-                for food in storage[user][month][date]['Dinner']:
+                for food in storage[username][month][date]['Dinner']:
                     reply = reply + '- ' + food + '\n'
-                    total_cal += data[food][0]
-                    total_carb += data[food][1]
-                    total_pro += data[food][2]
-                    total_fat += data[food][3]
+                    total_cal += userdata[username][0][food][0]
+                    total_carb += userdata[username][0][food][1]
+                    total_pro += userdata[username][0][food][2]
+                    total_fat += userdata[username][0][food][3]
             reply += '\n'
 
         average_cal = total_cal / total_days
         average_carb = total_carb / total_days
         average_pro = total_pro / total_days
         average_fat = total_fat / total_days
-        reply = reply + '*Total nutrients intake for this month*' + '\nTotal calories: ' + "{:.1f}".format(total_cal) + 'kcal\nTotal carbohydrates: ' + "{:.1f}".format(total_carb) + 'g\nTotal protein: ' + "{:.1f}".format(total_pro) + 'g\nTotal fat: ' + "{:.1f}".format(total_fat) + 'g\n\n'
-        reply = reply + '*Average nutrients intake for this month*' + '\nAverage calories: ' + "{:.1f}".format(average_cal) + 'kcal\nAverage carbohydrates: ' + "{:.1f}".format(average_carb) + 'g\nAverage protein: ' + "{:.1f}".format(average_pro) + 'g\nAverage fat: ' + "{:.1f}".format(average_fat) + 'g'
+        reply = reply + '*Total nutrients intake for this month*' + '\nTotal calories: ' + "{:.1f}".format(total_cal) + ' kcal\nTotal carbohydrates: ' + "{:.1f}".format(total_carb) + ' g\nTotal protein: ' + "{:.1f}".format(total_pro) + ' g\nTotal fat: ' + "{:.1f}".format(total_fat) + ' g\n\n'
+        reply = reply + '*Average nutrients intake for this month*' + '\nAverage calories: ' + "{:.1f}".format(average_cal) + ' kcal\nAverage carbohydrates: ' + "{:.1f}".format(average_carb) + ' g\nAverage protein: ' + "{:.1f}".format(average_pro) + ' g\nAverage fat: ' + "{:.1f}".format(average_fat) + ' g'
     update.message.reply_text(
         reply,
         parse_mode='Markdown',
         reply_markup=ReplyKeyboardRemove(),
     )
+    return ConversationHandler.END
+
+def addFood(update: Update, context: CallbackContext) -> int:
+    update.message.reply_text('Please enter the name of food',reply_markup=ReplyKeyboardRemove())
+    
+    return FOODNAME
+
+def foodName(update: Update, context: CallbackContext) -> int:
+    username = update.message.from_user.username
+    response = update.message.text
+    userdata[username][0][response] = []
+    userdata[username][1] = response
+    
+    update.message.reply_text('Please enter the Calories of food',reply_markup=ReplyKeyboardRemove())
+    
+    return FOODCAL
+
+def foodCal(update: Update, context: CallbackContext) -> int:
+    response = update.message.text
+    if (not response.isdigit()):
+        update.message.reply_text('Please give a number',
+            reply_markup=ReplyKeyboardRemove(),
+        )
+        return FOODCAL
+    username = update.message.from_user.username
+    userdata[username][0][userdata[username][1]].append(int(response))
+    update.message.reply_text('Please enter the Carbohydrates of food',reply_markup=ReplyKeyboardRemove())
+    
+    return FOODCARB
+
+def foodCarb(update: Update, context: CallbackContext) -> int:
+    response = update.message.text
+    if (not response.isdigit()):
+        update.message.reply_text('Please give a number',
+            reply_markup=ReplyKeyboardRemove(),
+        )
+        return FOODCARB
+    username = update.message.from_user.username
+    userdata[username][0][userdata[username][1]].append(int(response))
+    update.message.reply_text('Please enter the Protein of food',reply_markup=ReplyKeyboardRemove())
+    
+    return FOODPROTEIN
+
+def foodProtein(update: Update, context: CallbackContext) -> int:
+    response = update.message.text
+    if (not response.isdigit()):
+        update.message.reply_text('Please give a number',
+            reply_markup=ReplyKeyboardRemove(),
+        )
+        return FOODPROTEIN
+    username = update.message.from_user.username
+    userdata[username][0][userdata[username][1]].append(int(response))
+    update.message.reply_text('Please enter the Fat of food',reply_markup=ReplyKeyboardRemove())
+    
+    return FOODFAT
+
+def foodFat(update: Update, context: CallbackContext) -> int:
+    response = update.message.text
+    if (not response.isdigit()):
+        update.message.reply_text('Please give a number',
+            reply_markup=ReplyKeyboardRemove(),
+        )
+        return FOODFAT
+    username = update.message.from_user.username
+    userdata[username][0][userdata[username][1]].append(int(response))
+    update.message.reply_text('Your food has been added!',reply_markup=ReplyKeyboardRemove())
+    f = open("userdata.txt", "w")
+    f.write(json.dumps(userdata))
+    
     return ConversationHandler.END
 
 def cancel(update: Update, context: CallbackContext) -> int:
@@ -275,16 +363,22 @@ def main():
 
     # Add conversation handler with the states
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('add', add)],
+        entry_points=[CommandHandler('add', add),
+            CommandHandler('addfood', addFood)],
         states={
             FOOD: [MessageHandler(Filters.regex('^(Breakfast|Lunch|Dinner)$'), food)],
             MORE: [MessageHandler(Filters.text & ~Filters.command, more)],
             ADD: [MessageHandler(Filters.regex('^Yes$'), food), 
                 MessageHandler(Filters.regex('^No$'), add_success)],
+            FOODNAME: [MessageHandler(Filters.text, foodName)],
+            FOODCAL: [MessageHandler(Filters.text, foodCal)],
+            FOODCARB: [MessageHandler(Filters.text, foodCarb)],
+            FOODPROTEIN: [MessageHandler(Filters.text, foodProtein)],
+            FOODFAT: [MessageHandler(Filters.text, foodFat)],
         },
         fallbacks=[CommandHandler('cancel', cancel)],
     )
-
+    
     dispatcher.add_handler(conv_handler)
 
     # Start the Bot
