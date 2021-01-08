@@ -17,9 +17,13 @@ data = {
     "Zinger Burger": [450, 47.5, 25.7, 17.5],
     "Egg (50g)": [74, 0.3, 6.2, 4.9]
 }
-dailyRecommended = [2000, 260, 50, 70]
+dailyRecommended = { "Calories": [2000, "kcal"], 
+    "Carbohydrates": [260, "g"], 
+    "Protein": [50, "g"], 
+    "Fat": [70, "g"] }
 
 storage = {}
+mealtypes = {}
 
 # Define a few command handlers. These usually take the two arguments update and
 # context. Error handlers also receive the raised TelegramError object in error.
@@ -36,9 +40,19 @@ def help(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /help is issued."""
     update.message.reply_text('Available commands:\n'
         '/start - start nutribot\n'
-        '/cancel - stop nutribot\n'
         '/help - show available commands\n'
-        '/add - add a meal', 
+        '/recommended - show recommended daily nutrient intake\n'
+        '/add - add a meal\n'
+        '/daily - show nutrient intake for today\n'
+        '/cancel - stop nutribot', 
+        reply_markup=ReplyKeyboardRemove(),
+    )
+
+def recommended(update: Update, context: CallbackContext) -> None:
+    strings = []
+    for e in dailyRecommended:
+        strings.append(e + ": " + str(dailyRecommended[e][0]) + dailyRecommended[e][1])
+    update.message.reply_text('Recommended daily nutrient intake:\n' + '\n'.join(strings), 
         reply_markup=ReplyKeyboardRemove(),
     )
 
@@ -51,6 +65,11 @@ def add(update: Update, context: CallbackContext) -> int:
     return FOOD
 
 def food(update: Update, context: CallbackContext) -> int:
+    username = update.message.from_user.username
+    text = update.message.text
+    if text == 'Breakfast' or text == 'Lunch' or text == 'Dinner':
+        mealtypes[username] = text
+
     reply_keyboard = []
     for e in list(data.keys()):
         reply_keyboard.append([e])
@@ -61,13 +80,37 @@ def food(update: Update, context: CallbackContext) -> int:
     return MORE
 
 def more(update: Update, context: CallbackContext) -> int:
+    username = update.message.from_user.username
+    date = update.message.date.date()
+    mealtype = mealtypes[username]
+    food = update.message.text
+
+    if food not in data:
+        reply_keyboard = []
+        for e in list(data.keys()):
+            reply_keyboard.append([e])
+        update.message.reply_text(
+            'Please select a food from the list given.',
+            reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
+        )
+        return MORE
+
+    if username not in storage:
+        storage[username] = {}
+    if date not in storage[username]: 
+        storage[username][date] = {}
+    if mealtype not in storage[username][date]:
+        storage[username][date][mealtype] = []
+    arr = storage[username][date][mealtype]
+    arr.append(food)
+
     reply_keyboard = [['Yes'], ['No']]
     update.message.reply_text(
         'Is there more food to be added?',
         reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
     )
     return ADD
-    
+
 def add_success(update: Update, context: CallbackContext) -> int:
     update.message.reply_text(
         'The meal has been added!',
@@ -96,6 +139,8 @@ def main():
     dispatcher.add_handler(CommandHandler("start", start))
     dispatcher.add_handler(CommandHandler("help", help))
     dispatcher.add_handler(CommandHandler("cancel", cancel))
+
+    dispatcher.add_handler(CommandHandler("recommended", recommended))
 
     # Add conversation handler with the states
     conv_handler = ConversationHandler(
