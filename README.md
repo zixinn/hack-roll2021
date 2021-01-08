@@ -21,7 +21,7 @@ pip3 install python-telegram-bot
 
 ## Chat with our telegram bot!
 
-[@nutrinutribot](t.me/nutrinutribot)
+[@nutrinutribot](https://t.me/nutrinutribot)
 
 ## Built With
 
