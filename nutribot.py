@@ -117,6 +117,53 @@ def add_success(update: Update, context: CallbackContext) -> int:
         reply_markup=ReplyKeyboardRemove(),
     )
     return ConversationHandler.END
+    
+def daily(update: Update, context: CallbackContext) -> None:
+    user = update.message.from_user.username
+    date = update.message.date.date()
+    reply = ''
+    total_cal = 0
+    total_carb = 0
+    total_pro = 0
+    total_fat = 0
+    if user not in storage or date not in storage[user]:
+        reply = 'No data for today!'
+    else:
+        print(storage[user][date])
+        if 'Breakfast' in storage[user][date]:
+            reply += '*Breakfast*\n'
+            for food in storage[user][date]['Breakfast']:
+                reply = reply + '- ' + food + '\n'
+                total_cal += data[food][0]
+                total_carb += data[food][1]
+                total_pro += data[food][2]
+                total_fat += data[food][3]
+            reply += '\n'
+        if 'Lunch' in storage[user][date]:
+            reply += '*Lunch*\n'
+            for food in storage[user][date]['Lunch']:
+                reply = reply + '- ' + food + '\n'
+                total_cal += data[food][0]
+                total_carb += data[food][1]
+                total_pro += data[food][2]
+                total_fat += data[food][3]
+            reply += '\n'
+        if 'Dinner' in storage[user][date]:
+            reply += '*Dinner*\n'
+            for food in storage[user][date]['Dinner']:
+                reply = reply + '- ' + food + '\n'
+                total_cal += data[food][0]
+                total_carb += data[food][1]
+                total_pro += data[food][2]
+                total_fat += data[food][3]
+            reply += '\n'
+        reply = reply + '*Total nutrients intake*' + '\nTotal calories: ' + "{:.1f}".format(total_cal) + ' kcal\nTotal carbohydrates: ' + "{:.1f}".format(total_carb) + ' g\nTotal protein: ' + "{:.1f}".format(total_pro) + ' g\nTotal fat: ' + "{:.1f}".format(total_fat) + ' g'
+    update.message.reply_text(
+        reply,
+        parse_mode='Markdown',
+        reply_markup=ReplyKeyboardRemove(),
+    )
+    return ConversationHandler.END    
 
 def cancel(update: Update, context: CallbackContext) -> int:
     update.message.reply_text(
@@ -139,7 +186,7 @@ def main():
     dispatcher.add_handler(CommandHandler("start", start))
     dispatcher.add_handler(CommandHandler("help", help))
     dispatcher.add_handler(CommandHandler("cancel", cancel))
-
+    dispatcher.add_handler(CommandHandler("daily", daily))
     dispatcher.add_handler(CommandHandler("recommended", recommended))
 
     # Add conversation handler with the states
