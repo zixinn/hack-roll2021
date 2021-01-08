@@ -8,7 +8,7 @@ from telegram.ext import (
     CallbackContext,
 )
 
-MEALTYPE, FOOD = range(2)
+FOOD, MORE, ADD = range(3)
 
 data = {
     "Chicken fried rice (198g)": [329, 41.8, 12.4, 11.9],
@@ -19,7 +19,7 @@ data = {
 }
 dailyRecommended = [2000, 260, 50, 70]
 
-storage = []
+storage = {}
 
 # Define a few command handlers. These usually take the two arguments update and
 # context. Error handlers also receive the raised TelegramError object in error.
@@ -28,40 +28,57 @@ def start(update: Update, context: CallbackContext) -> None:
     name = update.message.from_user.first_name
     update.message.reply_text('Hi, ' + name + '! Nice to meet you! I\'m NutriBot!\n\n'
         'Send /help to see a list of available commands.\n'
-        'Send /cancel to stop talking to me.')
+        'Send /cancel to stop talking to me.', 
+        reply_markup=ReplyKeyboardRemove(),
+    )
 
-def help_command(update: Update, context: CallbackContext) -> None:
+def help(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /help is issued."""
-    update.message.reply_text('Help!')
+    update.message.reply_text('Available commands:\n'
+        '/start - start nutribot\n'
+        '/cancel - stop nutribot\n'
+        '/help - show available commands\n'
+        '/add - add a meal', 
+        reply_markup=ReplyKeyboardRemove(),
+    )
 
-def add_command(update: Update, context: CallbackContext) -> None:
+def add(update: Update, context: CallbackContext) -> int:
     reply_keyboard = [['Breakfast'], ['Lunch'], ['Dinner']]
     update.message.reply_text(
         'Please select meal type:',
         reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
     )
-    return MEALTYPE
+    return FOOD
 
-def mealtype(update: Update, context: CallbackContext) -> int:
+def food(update: Update, context: CallbackContext) -> int:
     reply_keyboard = []
     for e in list(data.keys()):
         reply_keyboard.append([e])
     update.message.reply_text(
         'What did you eat?',
-        reply_markup=ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True, one_time_keyboard=True),
+        reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
     )
-    return FOOD
+    return MORE
 
-def food(update: Update, context: CallbackContext) -> None:
+def more(update: Update, context: CallbackContext) -> int:
+    reply_keyboard = [['Yes'], ['No']]
+    update.message.reply_text(
+        'Is there more food to be added?',
+        reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
+    )
+    return ADD
+    
+def add_success(update: Update, context: CallbackContext) -> int:
     update.message.reply_text(
         'The meal has been added!',
         reply_markup=ReplyKeyboardRemove(),
     )
-    return
+    return ConversationHandler.END
 
 def cancel(update: Update, context: CallbackContext) -> int:
     update.message.reply_text(
-        'Bye! Hope we can talk again soon.', reply_markup=ReplyKeyboardRemove()
+        'Bye! Hope we can talk again soon.', 
+        reply_markup=ReplyKeyboardRemove(), 
     )
     return ConversationHandler.END
 
@@ -77,14 +94,17 @@ def main():
 
     # on different commands - answer in Telegram
     dispatcher.add_handler(CommandHandler("start", start))
-    dispatcher.add_handler(CommandHandler("help", help_command))
+    dispatcher.add_handler(CommandHandler("help", help))
+    dispatcher.add_handler(CommandHandler("cancel", cancel))
 
     # Add conversation handler with the states
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('add', add_command)],
+        entry_points=[CommandHandler('add', add)],
         states={
-            MEALTYPE: [MessageHandler(Filters.regex('^(Breakfast|Lunch|Dinner)$'), mealtype)],
-            FOOD: [MessageHandler(Filters.text & ~Filters.command, food)],
+            FOOD: [MessageHandler(Filters.regex('^(Breakfast|Lunch|Dinner)$'), food)],
+            MORE: [MessageHandler(Filters.text & ~Filters.command, more)],
+            ADD: [MessageHandler(Filters.regex('^Yes$'), food), 
+                MessageHandler(Filters.regex('^No$'), add_success)],
         },
         fallbacks=[CommandHandler('cancel', cancel)],
     )
